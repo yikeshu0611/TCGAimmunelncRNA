@@ -17,14 +17,14 @@ FPKM2df <- function(clinical_cart,
     # clinical
     cat(crayon::bgWhite('\n\n === 处理   临床数据  === '))
     cat('\nclinical是原始的临床数据，直接提取的，没有经过处理')
-    clinical <- read_TCGA_Clinical(clinical_cart)
+    clinical <- read_TCGA_Clinical(Clinical_dir = clinical_cart)
 
 
     # clinical_short
     message('\n\n提取 clinical_short')
     cat('这个是整理好的临床数据, 后面的分析都用它')
     cat(crayon::cyan(paste('\n\n共有病人: ',nrow(clinical),'个')))
-    clinical_short <- clinical_short(clinical)
+    clinical_short <- clinical_short(clinical = clinical)
 
 
     cat(crayon::bgWhite('\n\n\n === 处理  测序数据    === '))
@@ -57,7 +57,14 @@ clinical_short <- function(clinical){
                                cl$days_to_death)
     colnames(cl) <- c("bcr_patient_barcode", "time", "status", "gender",
                       "age", "stage","t", "n", "m")
+    ck <- do::NA.row.sums(cl[,c('time','status')]) >0
+    cl <- cl[!ck,]
+    if (anyDuplicated(cl$bcr_patient_barcode)){
+        cl_check <<- cl
+        stop('请联系我微信Charleszhanggo')
+    }
     rownames(cl) <- cl$bcr_patient_barcode
+
     cl <- cl[,colnames(cl) %not% 'bcr_patient_barcode']
     cl$status <- as.numeric(ifelse(tolower(cl$status)=='dead',1,0))
     cl$time <- as.numeric(cl$time)
@@ -72,7 +79,8 @@ clinical_short <- function(clinical){
     cl$stage[is.na(cl$stage)] = 'Unknown'
     cl$age=as.numeric(cl$age)
     cat(crayon::cyan('\n收集的临床信息有: ',paste0(colnames(cl),collapse = ', ')))
-    cat('\n生存状态编码转换 Dead to 1, Alive to 0')
+    cat(crayon::cyan('删除time或者status缺失的病例：',sum(ck)))
+    cat('\n生存状态status编码转换 Dead to 1, Alive to 0')
     cl
 }
 
